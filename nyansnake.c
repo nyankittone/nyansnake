@@ -193,7 +193,7 @@ bool nukePlayfield(PlayfieldType *playfield) {
     }
 }
 
-/* Function that places a pellet (a square with the ID of ids.pellet) on to a random
+/* Function that places a pellet (a square with the ID of PELLET_ID) on to a random
    spot on the playfield that isn't already occupied with something else. */
 u8 addPellet(PlayfieldType *playfield) {
     if(!playfield) {
@@ -336,7 +336,9 @@ u8 advanceSnake(SnakeType *snake) {
 }
 
 /* Function that operates on a snake struct to change its direction value. I'm using
-   a function to do it instead of doing it directly, because this functon checks */
+   a function to do it instead of doing it directly, because this functon checks
+   if the new direction is "valid" (as in, not exactly opposite of the current
+   direction) */
 u8 setSnakeDirection(SnakeType *snake, DirectionType direction) {
     if(!(snake && direction)) {
         return (!snake ? 1:0) | (!direction ? 1:0);
@@ -351,9 +353,8 @@ u8 setSnakeDirection(SnakeType *snake, DirectionType direction) {
     return 0;
 }
 
-/* The code in this function was written really poorly. I'll have to do some clean-up
-   work on it in a little bit. This function makes me sad, and needs to get
-   refactored. */
+/* This function figures out where the upper-left corner of the playfield should
+   be on the curses screen, and saves that to a value in playfield. */
 u8 centerPlayfield(PlayfieldType *playfield) {
     if(!playfield) {
         return 1;

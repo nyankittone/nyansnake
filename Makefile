@@ -1,6 +1,4 @@
 # Compiler to use for what purpose.
-# Also, the entire build system seems to fail when something other than clang is
-# used. I'll have to fix that
 CC = cc
 CC_DEV = clang
 
