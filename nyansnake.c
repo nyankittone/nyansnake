@@ -5,7 +5,7 @@
 
 #include <curses.h>
 #include <inttypes.h>
-#include <math.h>
+//#include <math.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -145,21 +145,16 @@ PlayfieldPart **makePlayfieldArray(Coords dimensions) {
         sizeof(PlayfieldPart*) * dimensions.x
     );
 
-    if(!returned) {
-        return returned;
-    }
+    if(!returned) return returned;
 
     // Setting up first array
     for(u32_f i = 0; i < dimensions.x; i++) {
         ((PlayfieldPart**) returned)[i] =
-            returned + sizeof(PlayfieldPart*) * dimensions.x +
-            sizeof(PlayfieldPart) * dimensions.y * i;
+            (PlayfieldPart*)((PlayfieldPart**) returned + dimensions.x) + dimensions.y * i;
     }
 
     // Initializing every cell in the array to values representing no data
-    for(u32_f i = 0; i < xy_product; i++) {
-        ((PlayfieldPart**) returned)[0][i] = (struct PlayfieldPart) {0,NO_DIRECTION};
-    }
+    memset(((PlayfieldPart**) returned)[0],0,sizeof(PlayfieldPart) * xy_product);
 
     return returned;
 }
@@ -196,13 +191,8 @@ bool nukePlayfield(PlayfieldType *playfield) {
 /* Function that places a pellet (a square with the ID of PELLET_ID) on to a random
    spot on the playfield that isn't already occupied with something else. */
 u8 addPellet(PlayfieldType *playfield) {
-    if(!playfield) {
-        return 1;
-    }
-
-    if(!playfield -> grid) {
-        return 2;
-    }
+    if(!playfield) return 1;
+    if(!playfield -> grid) return 2;
 
     u32_f random_index, grid_area = COORD_PRO(playfield -> size);
 
@@ -226,20 +216,13 @@ u8 addPellet(PlayfieldType *playfield) {
    because I want to make sure it's impossible for a player to collect a pellet
    straight-away at the beginning of the game without doing anything. */
 u8 addFirstPellet(PlayfieldType *playfield, u32_f omitted_row) {
-    if(!playfield) {
-        return 1;
-    }
-
-    if(!playfield -> grid) {
-        return 2;
-    }
+    if(!playfield) return 1;
+    if(!playfield -> grid) return 2;
 
     u32_f random_x = rand() / (RAND_MAX / playfield -> size.x),
           random_y = rand() / (RAND_MAX / (playfield -> size.y - 1));
 
-    if(random_y >= omitted_row) {
-        random_y++;
-    }
+    if(random_y >= omitted_row) random_y++;
 
     playfield -> grid[random_x][random_y].direction = NO_DIRECTION;
     playfield -> grid[random_x][random_y].id = PELLET_ID;
@@ -282,9 +265,7 @@ SnakeType newSnake (
    direction. It will also do the appropriate thing for when we encounter an obstacle
    or a pellet. */
 u8 advanceSnake(SnakeType *snake) {
-    if(!snake) {
-        return 1;
-    }
+    if(!snake) return 1;
 
     Coords next_coord = travel(snake -> head,snake -> direction,1);
     bool pellet_spawn_flag = false;
@@ -328,10 +309,7 @@ u8 advanceSnake(SnakeType *snake) {
     snake -> head = travel(snake -> head,snake -> direction,1);
     snake -> owner -> grid COORD_ARR(snake -> head).id = SNAKE_ID;
 
-    if(pellet_spawn_flag) {
-        addPellet(snake -> owner);
-    }
-
+    if(pellet_spawn_flag) addPellet(snake -> owner);
     return 0;
 }
 
@@ -340,14 +318,10 @@ u8 advanceSnake(SnakeType *snake) {
    if the new direction is "valid" (as in, not exactly opposite of the current
    direction) */
 u8 setSnakeDirection(SnakeType *snake, DirectionType direction) {
-    if(!(snake && direction)) {
-        return (!snake ? 1:0) | (!direction ? 1:0);
-    }
+    if(!(snake && direction)) return (!snake ? 1:0) | (!direction ? 1:0);
 
     // Don't know why line here works, but it does
-    if(!(((snake -> direction) - direction) % 2)) {
-        return 4;
-    }
+    if(!(((snake -> direction) - direction) % 2)) return 4;
 
     snake -> direction = direction;
     return 0;
@@ -356,9 +330,7 @@ u8 setSnakeDirection(SnakeType *snake, DirectionType direction) {
 /* This function figures out where the upper-left corner of the playfield should
    be on the curses screen, and saves that to a value in playfield. */
 u8 centerPlayfield(PlayfieldType *playfield) {
-    if(!playfield) {
-        return 1;
-    }
+    if(!playfield) return 1;
 
     clear();
     attrset(A_NORMAL);
@@ -371,9 +343,7 @@ u8 centerPlayfield(PlayfieldType *playfield) {
         top_left.y / 2 - playfield -> size.y / 2 - 1
     );
 
-    if(top_left.x < 0 || top_left.y < 0) {
-        return 2;
-    }
+    if(top_left.x < 0 || top_left.y < 0) return 2;
 
     playfield -> draw_point = top_left;
     return 0;
@@ -385,11 +355,8 @@ u8 centerPlayfield(PlayfieldType *playfield) {
    still probably going to rewrite it to improve efficiency in the future, however.
    */
 int draw(PlayfieldType *playfield) {
-    if(!playfield) {
-        return 1;
-    }
+    if(!playfield) return 1;
 
-    // drawing border
     attrset(A_BOLD | COLOR_PAIR(BORDER_ID));
 
     u32_f min_x = playfield -> draw_point.x,
@@ -440,8 +407,8 @@ void initCurses(void) {
     clear();
 }
 
-/* There's definitely a more flexible way to handle input, but a simple switch
-   statement like this will be fine for now :3 */
+// in this context, "trans" is an abbreviation for "translate". We are translating a keypress
+// (the variable "input") into a DirectionType.
 DirectionType transKeypressToDirection(int input) {
     switch(input) {
         case KEY_UP:
