@@ -39,3 +39,5 @@ After that, you should have a binary file called "nyansnake" inside that directo
 + Add a menu interface into the game
 + Allow for customization of the color palette used for objects in the game
 + Allow for customizable keybinds
++ Fix the code not compiling on macOS without a slight tweak to nyansnake.c
+
