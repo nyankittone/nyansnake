@@ -28,15 +28,15 @@ typedef uint_fast32_t u32_f;
 typedef int8_t i8;
 typedef uint8_t u8;
 
-typedef enum Direction {
-    NO_DIRECTION = 0,
-    NORTH = 1,
-    EAST = 2,
-    SOUTH = 3,
-    WEST = 4
+typedef enum {
+    NO_DIRECTION,
+    NORTH,
+    EAST,
+    SOUTH,
+    WEST,
 } DirectionType;
 
-typedef enum IDs {
+typedef enum {
     NO_ID,
     BORDER_ID,
     SNAKE_ID,
@@ -57,7 +57,7 @@ void printVersion(void) {
 
 /* This struct is used to represent a 2D pair of values for any purpose.
    This could be, say, the coordinates to a part on a 2D array, or whatever. */
-typedef struct Coords {
+typedef struct {
     i32_f x,y;
 } Coords;
 
@@ -79,9 +79,7 @@ Coords halfCoords(Coords coords) {
    a distance, and it will return some coords representing where something would
    travel to from that information. */
 Coords travel(Coords position, DirectionType direction, i32_f distance) {
-    if(!distance) {
-        return position;
-    }
+    if(!distance) return position;
 
     switch(direction) {
         case NORTH:
@@ -112,23 +110,23 @@ void moveAndAddTwoChars(u32_f y, u32_f x, char the_char) {
 }
 
 typedef struct ColorPair {
-    short fg,bg;
+    short fg, bg;
 } ColorPair;
 
 typedef struct ColorTable {
-    ColorPair border,snake,pellet;
+    ColorPair border, snake, pellet;
 } ColorTable;
 
 int setColorOfId(u8 id, ColorPair colors) {
     return init_pair(id,colors.fg,colors.bg);
 }
 
-typedef struct PlayfieldPart {
+typedef struct {
     u8 id;
     DirectionType direction;
 } PlayfieldPart;
 
-typedef struct Playfield {
+typedef struct {
     Coords size,draw_point;
     PlayfieldPart **grid,
     *array;
@@ -177,36 +175,34 @@ PlayfieldType newPlayfield(Coords dimensions) {
 
 // Function that unallocates the memory for our playfield array.
 bool nukePlayfield(PlayfieldType *playfield) {
-    if(playfield -> grid) {
-        free(playfield -> grid);
-        playfield -> grid = NULL;
-        playfield -> array = NULL;
+    if(!playfield->grid) return false;
 
-        return true;
-    } else {
-        return false;
-    }
+    free(playfield->grid);
+    playfield->grid = NULL;
+    playfield->array = NULL;
+
+    return true;
 }
 
 /* Function that places a pellet (a square with the ID of PELLET_ID) on to a random
    spot on the playfield that isn't already occupied with something else. */
 u8 addPellet(PlayfieldType *playfield) {
     if(!playfield) return 1;
-    if(!playfield -> grid) return 2;
+    if(!playfield->grid) return 2;
 
-    u32_f random_index, grid_area = COORD_PRO(playfield -> size);
+    u32_f random_index, grid_area = COORD_PRO(playfield->size);
 
-    /* We continuously generate random numbers until the index it land on is not
+    /* We continuously generate random numbers until the index it lands on is not
        being occupied. This could theoretically cause performance problems with
        very long snakes that occupy a large portion of the board, so I might change
        the algorithm later so it will not be like that? But at the same time, this
        will be unlikely to cause problems, realistically. */
     do {
         random_index = rand() / (RAND_MAX / grid_area);
-    } while(playfield -> array[random_index].id);
+    } while(playfield->array[random_index].id);
 
-    playfield -> array[random_index].direction = NO_DIRECTION;
-    playfield -> array[random_index].id = PELLET_ID;
+    playfield->array[random_index].direction = NO_DIRECTION;
+    playfield->array[random_index].id = PELLET_ID;
 
     return 0;
 }
@@ -217,37 +213,30 @@ u8 addPellet(PlayfieldType *playfield) {
    straight-away at the beginning of the game without doing anything. */
 u8 addFirstPellet(PlayfieldType *playfield, u32_f omitted_row) {
     if(!playfield) return 1;
-    if(!playfield -> grid) return 2;
+    if(!playfield->grid) return 2;
 
-    u32_f random_x = rand() / (RAND_MAX / playfield -> size.x),
-          random_y = rand() / (RAND_MAX / (playfield -> size.y - 1));
+    u32_f random_x = rand() / (RAND_MAX / playfield->size.x),
+          random_y = rand() / (RAND_MAX / (playfield->size.y - 1));
 
     if(random_y >= omitted_row) random_y++;
 
-    playfield -> grid[random_x][random_y].direction = NO_DIRECTION;
-    playfield -> grid[random_x][random_y].id = PELLET_ID;
+    playfield->grid[random_x][random_y].direction = NO_DIRECTION;
+    playfield->grid[random_x][random_y].id = PELLET_ID;
 
     return 0;
 }
 
 typedef struct Snake {
     PlayfieldType *owner;
-    Coords head,tail;
-    u32_f length,target_length;
+    Coords head, tail;
+    u32_f length, target_length;
     DirectionType direction;
     u8 id;
 } SnakeType;
 
 /* Function that returns a struct for a new snake struct, while adding the snake to
-   a playfield specified. */
-SnakeType newSnake (
-    PlayfieldType *owner, u32_f length,
-    Coords position
-) {
-    if(!length) {
-        // TODO: DO SOME ERROR HANDLING HERE BITCH
-    }
-
+   a playfield specified. Note that a snake with a length of zero is a perfectly valid input. */
+SnakeType newSnake(PlayfieldType *owner, u32_f length, Coords position) {
     SnakeType returned = {
         .owner = owner,
         .head = position,
@@ -257,7 +246,7 @@ SnakeType newSnake (
         .direction = EAST
     };
 
-    owner -> grid COORD_ARR(position).id = SNAKE_ID;
+    owner->grid COORD_ARR(position).id = SNAKE_ID;
     return returned;
 }
 
@@ -267,49 +256,48 @@ SnakeType newSnake (
 u8 advanceSnake(SnakeType *snake) {
     if(!snake) return 1;
 
-    Coords next_coord = travel(snake -> head,snake -> direction,1);
+    Coords next_coord = travel(snake->head,snake->direction,1);
     bool pellet_spawn_flag = false;
 
-    // If a collision with awall or the snake happens , quit the game
-    if(next_coord.x < 0 || next_coord.x >= snake -> owner -> size.x ||
-        next_coord.y < 0 || next_coord.y >= snake -> owner -> size.y ||
-        snake -> owner -> grid COORD_ARR(next_coord).id == SNAKE_ID
+    // If a collision with a wall or the snake happens, quit the game
+    if(next_coord.x < 0 || next_coord.x >= snake->owner->size.x ||
+        next_coord.y < 0 || next_coord.y >= snake->owner->size.y ||
+        snake->owner->grid COORD_ARR(next_coord).id == SNAKE_ID
     ) {
         return 2;
     }
 
     /* If colliding with a pellet, increase the terget length and prepare to spawn
        a new pellet later in this function. */
-    if(snake -> owner -> grid COORD_ARR(next_coord).id == PELLET_ID) {
-        snake -> target_length += LENGTH_INCRIMENTER;
-        snake -> length++;
+    if(snake->owner->grid COORD_ARR(next_coord).id == PELLET_ID) {
+        snake->target_length += LENGTH_INCRIMENTER;
+        snake->length++;
         pellet_spawn_flag = true;
 
-        goto post_tail_move;
+        goto post_tail_move; // nothing to see here
     }
 
     /* move tail, unless length doesn't meet target_length, then
        incriment length by 1 */
-    if(snake -> length == snake -> target_length) {
-        snake -> owner -> grid COORD_ARR(snake -> tail).id = NO_ID;
-        snake -> tail = travel (
-            snake -> tail,
-            snake -> owner -> grid COORD_ARR(snake -> tail).direction,
+    if(snake->length == snake->target_length) {
+        snake->owner->grid COORD_ARR(snake->tail).id = NO_ID;
+        snake->tail = travel (
+            snake->tail,
+            snake->owner->grid COORD_ARR(snake->tail).direction,
             1
         );
-
     } else {
-        snake -> length++;
+        snake->length++;
     }
 
     post_tail_move:
 
     // move head
-    snake -> owner -> grid COORD_ARR(snake -> head).direction = snake -> direction;
-    snake -> head = travel(snake -> head,snake -> direction,1);
-    snake -> owner -> grid COORD_ARR(snake -> head).id = SNAKE_ID;
+    snake->owner->grid COORD_ARR(snake->head).direction = snake->direction;
+    snake->head = travel(snake->head,snake->direction,1);
+    snake->owner->grid COORD_ARR(snake->head).id = SNAKE_ID;
 
-    if(pellet_spawn_flag) addPellet(snake -> owner);
+    if(pellet_spawn_flag) addPellet(snake->owner);
     return 0;
 }
 
@@ -318,17 +306,20 @@ u8 advanceSnake(SnakeType *snake) {
    if the new direction is "valid" (as in, not exactly opposite of the current
    direction) */
 u8 setSnakeDirection(SnakeType *snake, DirectionType direction) {
-    if(!(snake && direction)) return (!snake ? 1:0) | (!direction ? 1:0);
+    if(!(snake && direction)) return (!snake ? 1:0) | (!direction ? 2:0);
 
-    // Don't know why line here works, but it does
-    if(!(((snake -> direction) - direction) % 2)) return 4;
+    // Doing an early return if the direction we're trying to make the snake move in is opposite of
+    // the current one
+    if(!(((snake->direction) - direction) % 2)) return 4;
 
-    snake -> direction = direction;
+    snake->direction = direction;
     return 0;
 }
 
 /* This function figures out where the upper-left corner of the playfield should
-   be on the curses screen, and saves that to a value in playfield. */
+   be on the curses screen, and saves that to a value in playfield. 
+   TODO: Apparantly this function also resets the curses screen. A refactor so that these are not
+   intertwined could be a good idea.*/
 u8 centerPlayfield(PlayfieldType *playfield) {
     if(!playfield) return 1;
 
@@ -339,13 +330,13 @@ u8 centerPlayfield(PlayfieldType *playfield) {
     getmaxyx(stdscr,top_left.y,top_left.x);
 
     top_left = newCoords (
-        top_left.x / 2 - playfield -> size.x - 2,
-        top_left.y / 2 - playfield -> size.y / 2 - 1
+        top_left.x / 2 - playfield->size.x - 2,
+        top_left.y / 2 - playfield->size.y / 2 - 1
     );
 
     if(top_left.x < 0 || top_left.y < 0) return 2;
 
-    playfield -> draw_point = top_left;
+    playfield->draw_point = top_left;
     return 0;
 }
 
@@ -359,10 +350,10 @@ int draw(PlayfieldType *playfield) {
 
     attrset(A_BOLD | COLOR_PAIR(BORDER_ID));
 
-    u32_f min_x = playfield -> draw_point.x,
-          min_y = playfield -> draw_point.y,
-          max_x = min_x + playfield -> size.x * 2 + 2,
-          max_y = min_y + playfield -> size.y + 1;
+    u32_f min_x = playfield->draw_point.x,
+          min_y = playfield->draw_point.y,
+          max_x = min_x + playfield->size.x * 2 + 2,
+          max_y = min_y + playfield->size.y + 1;
 
     move(min_y,min_x);
     for(u32_f i = min_x,maxer_x = max_x + 1; i < maxer_x; i++) {
@@ -380,11 +371,11 @@ int draw(PlayfieldType *playfield) {
     }
 
     // drawing innards now
-    for(u32_f i_y = 0; i_y < playfield -> size.y; i_y++) {
+    for(u32_f i_y = 0; i_y < playfield->size.y; i_y++) {
         move(min_y + i_y + 1,min_x + 2);
 
-        for(u32_f i_x = 0; i_x < playfield -> size.x; i_x++) {
-            attrset(A_BOLD | COLOR_PAIR(playfield -> grid[i_x][i_y].id));
+        for(u32_f i_x = 0; i_x < playfield->size.x; i_x++) {
+            attrset(A_BOLD | COLOR_PAIR(playfield->grid[i_x][i_y].id));
             addTwoChars(' ');
         }
     }
@@ -402,8 +393,14 @@ void initCurses(void) {
     noecho();
     keypad(stdscr,true);
     start_color();
-    signal(SIGWINCH,NULL); // I will need to use this to have a special action occur
-                           // if SIGWINCH is raised.
+
+    // For some reason, on macOS, the SIGWINCH signal either doesn't exist, or something similar.
+    // Using a little bit of preprocessor fuckery to disable using this signal on Apple platforms
+    // specifically.
+    #ifndef __APPLE__
+        signal(SIGWINCH,NULL); // I will need to use this to have a special action occur
+    #endif                     // if SIGWINCH is raised.
+
     clear();
 }
 
@@ -468,17 +465,21 @@ u32_f game(Coords dimensions, ColorTable colors) {
         };
 
         draw(&playfield);
+
+        // TODO: nanosleep wil suspend for this time no matter what. Make this suspend for the
+        // right amount of time when a lot of stuff is done, so the game doesn't slow down a little
+        // when that happens.
         nanosleep(&(struct timespec){0,90000000},NULL);
     }
 
-    // Remember to free your heap memory! :3
-    nukePlayfield(&playfield);
-    timeout(-1);
+    nukePlayfield(&playfield); // Overly dramatic names for functions that deallocate memory are
+    timeout(-1);               // funny.
     return snake.length;
 }
 
-/* The main function here is mostly just doing boring argument parsing before
-   handing off everything to the game. */
+// TODO: This program is currently using the *terrible* getopt API present in POSIX for parsing
+// command line arguments. getopt is very limiting, so I plan on replacing it with my own
+// home-grown argument parser... eventually.
 int main(int argc, char *argv[]) {
     CommandOption opts[] = {
         {"h","help","Prints the help text and exits"},
