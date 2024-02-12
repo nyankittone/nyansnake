@@ -5,7 +5,6 @@
 
 #include <curses.h>
 #include <inttypes.h>
-//#include <math.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -42,6 +41,12 @@ typedef enum {
     SNAKE_ID,
     PELLET_ID
 } IdType;
+
+typedef enum {
+    ADVANCE_SUCCESS,
+    CANT_ADVANCE_SNAKE_NULL,
+    CANT_ADVANCE_SNAKE_COLLISION,
+} AdvanceSnakeResult;
 
 /* Function that, uhh, *checks notes* prints the program's version number to
    the screen.
@@ -253,8 +258,8 @@ SnakeType newSnake(PlayfieldType *owner, u32_f length, Coords position) {
 /* Function that advances a snake object forward in its playfield once in a
    direction. It will also do the appropriate thing for when we encounter an obstacle
    or a pellet. */
-u8 advanceSnake(SnakeType *snake) {
-    if(!snake) return 1;
+AdvanceSnakeResult advanceSnake(SnakeType *snake) {
+    if(!snake) return CANT_ADVANCE_SNAKE_NULL;
 
     Coords next_coord = travel(snake->head,snake->direction,1);
     bool pellet_spawn_flag = false;
@@ -264,7 +269,7 @@ u8 advanceSnake(SnakeType *snake) {
         next_coord.y < 0 || next_coord.y >= snake->owner->size.y ||
         snake->owner->grid COORD_ARR(next_coord).id == SNAKE_ID
     ) {
-        return 2;
+        return CANT_ADVANCE_SNAKE_COLLISION;
     }
 
     /* If colliding with a pellet, increase the terget length and prepare to spawn
@@ -298,7 +303,7 @@ u8 advanceSnake(SnakeType *snake) {
     snake->owner->grid COORD_ARR(snake->head).id = SNAKE_ID;
 
     if(pellet_spawn_flag) addPellet(snake->owner);
-    return 0;
+    return ADVANCE_SUCCESS;
 }
 
 /* Function that operates on a snake struct to change its direction value. I'm using
@@ -404,8 +409,9 @@ void initCurses(void) {
     clear();
 }
 
-// in this context, "trans" is an abbreviation for "translate". We are translating a keypress
-// (the variable "input") into a DirectionType.
+// This function translates an int that is supposed to be returned from getch() into a valid
+// DirectionType for the snake. If the input doesn't map to any valid direction, then NO_DIRECTION
+// is returned.
 DirectionType transKeypressToDirection(int input) {
     switch(input) {
         case KEY_UP:
@@ -452,18 +458,11 @@ u32_f game(Coords dimensions, ColorTable colors) {
     centerPlayfield(&playfield);
     draw(&playfield);
 
-    // The main loop. :3
     while(true) {
         int input;
 
-        if((input = getch()) != -1) {
-            setSnakeDirection(&snake,transKeypressToDirection(input));
-        }
-
-        if(advanceSnake(&snake) == 2) {
-            break;
-        };
-
+        if((input = getch()) != ERR) setSnakeDirection(&snake,transKeypressToDirection(input));
+        if(advanceSnake(&snake) == CANT_ADVANCE_SNAKE_COLLISION) break;
         draw(&playfield);
 
         // TODO: nanosleep wil suspend for this time no matter what. Make this suspend for the
