@@ -22,22 +22,22 @@ DEV_OBJS := $(patsubst $(SRC)/%.c,$(DEV_OBJ)/%.o,$(SRCS))
 all: $(EXE)
 
 $(EXE): $(OBJS) $(EXE).o
-	$(CC) $(CFLAGS) $(RELEASE_FLAGS) $^ -o $@
+	$(CC) $(RELEASE_FLAGS) $^ $(CFLAGS) -o $@
 
 $(DEV_EXE): $(DEV_OBJS) $(DEV_EXE).o
-	$(CC) $(CFLAGS) $(DEV_FLAGS) $^ -o $@
+	$(CC) $(DEV_FLAGS) $^ $(CFLAGS) -o $@
 
 $(OBJ)/%.o: $(SRC)/%.c | $(OBJ)
-	$(CC) $(CFLAGS) $(RELEASE_FLAGS) -c $< -o $@
+	$(CC) $(RELEASE_FLAGS) -c $< $(CFLAGS) -o $@
 
 $(DEV_OBJ)/%.o: $(SRC)/%.c | $(DEV_OBJ)
-	$(CC) $(CFLAGS) $(DEV_FLAGS) -c $< -o $@
+	$(CC) $(DEV_FLAGS) -c $< $(CFLAGS) -o $@
 
 $(EXE).o: $(EXE).c
-	$(CC) $(CFLAGS) $(RELEASE_FLAGS) -c $< -o $@
+	$(CC) $(RELEASE_FLAGS) -c $< $(CFLAGS) -o $@
 
 $(DEV_EXE).o: $(EXE).c
-	$(CC) $(CFLAGS) $(DEV_FLAGS) -c $< -o $@
+	$(CC) $(DEV_FLAGS) -c $< $(CFLAGS) -o $@
 
 $(OBJ):
 	$(MKDIR) $@
